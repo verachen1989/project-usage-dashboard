@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>区域在售项目总使用详情</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #16324f;
+      --muted: #6b7c93;
+      --line: #dbe4f0;
+      --brand: #1f4e78;
+      --brand-soft: #dce8f6;
+      --green: #0f9d58;
+      --blue: #2f6fed;
+      --orange: #ff8a3d;
+      --shadow: 0 18px 40px rgba(31, 78, 120, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(47,111,237,0.12), transparent 24%),
+        radial-gradient(circle at left top, rgba(15,157,88,0.10), transparent 18%),
+        var(--bg);
+      color: var(--text);
+    }
+    .page { max-width: 1600px; margin: 0 auto; padding: 28px 24px 56px; }
+    .hero { display: grid; gap: 10px; margin-bottom: 18px; }
+    .eyebrow { color: var(--brand); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: 32px; line-height: 1.2; }
+    .subtitle { color: var(--muted); font-size: 14px; line-height: 1.7; }
+    .toolbar {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--line); background: white; color: var(--text);
+      border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer;
+      text-decoration: none;
+    }
+    .select {
+      min-width: 240px; border: 1px solid var(--line); background: white;
+      border-radius: 12px; padding: 10px 12px; color: var(--text); font-size: 14px;
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid rgba(31, 78, 120, 0.08);
+      border-radius: 22px;
+      padding: 18px 18px 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .panel-head {
+      display: flex; align-items: end; justify-content: space-between; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .panel-title { margin: 0; font-size: 18px; font-weight: 700; }
+    .panel-note { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .kpis { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0,1fr)); margin-bottom: 18px; }
+    .kpi {
+      border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px;
+      background: linear-gradient(180deg, #fff, #f8fbff);
+    }
+    .kpi .label { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .kpi .value { font-size: 26px; font-weight: 800; line-height: 1; }
+    .chart-wrap { width: 100%; overflow-x: auto; }
+    svg.chart { width: 100%; min-width: 840px; height: 320px; display: block; }
+    .legend { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:12px; margin-top:8px; }
+    .legend-item { display:inline-flex; align-items:center; gap:8px; }
+    .swatch { width:12px; height:12px; border-radius:99px; }
+    .table-wrap {
+      overflow: auto; border-radius: 18px; border: 1px solid var(--line); position: relative;
+    }
+    table { width: 100%; min-width: 1320px; border-collapse: collapse; background: white; }
+    th, td {
+      padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-size: 13px;
+    }
+    thead th {
+      background: #f8fbff; color: var(--muted); font-weight: 700; position: sticky; top: 0; z-index: 2;
+    }
+    th:first-child, td:first-child,
+    th:nth-child(2), td:nth-child(2) {
+      text-align: left; position: sticky; background: white;
+    }
+    th:first-child, td:first-child { left: 0; min-width: 120px; z-index: 4; }
+    th:nth-child(2), td:nth-child(2) { left: 120px; min-width: 320px; z-index: 3; box-shadow: 6px 0 10px rgba(22, 50, 79, 0.04); }
+    thead th:first-child, thead th:nth-child(2) { background:#f8fbff; }
+    tbody tr:nth-child(odd) td { background: #fcfdff; }
+    tbody tr:nth-child(odd) td:first-child, tbody tr:nth-child(odd) td:nth-child(2) { background: #fcfdff; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { color: var(--brand); }
+    .tooltip {
+      position: fixed; pointer-events: none; z-index: 9999; max-width: 260px;
+      padding: 10px 12px; border-radius: 12px; background: rgba(17, 27, 43, 0.92);
+      color: white; font-size: 12px; line-height: 1.6; box-shadow: 0 16px 36px rgba(10, 23, 44, 0.28);
+      opacity: 0; transform: translateY(6px); transition: opacity .12s ease, transform .12s ease; white-space: pre-line;
+    }
+    .tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 1100px) { .kpis { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 760px) { .kpis { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="eyebrow">Region Drilldown</div>
+      <h1 id="pageTitle">区域在售项目总使用详情</h1>
+      <div class="subtitle">查看点击排名后选中的区域，在所选月份下的项目总姓名、分管项目名、整体访问次数、移动端访问次数和 PC 端访问次数。</div>
+    </section>
+
+    <div class="toolbar">
+      <a class="btn" href="./project_usage_dashboard.html">返回区域排名</a>
+      <label class="panel-note" for="regionSelect">选择区域</label>
+      <select id="regionSelect" class="select"></select>
+      <label class="panel-note" for="monthSelect">选择月份</label>
+      <select id="monthSelect" class="select"></select>
+    </div>
+
+    <section class="kpis" id="kpiGrid"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">区域月度趋势</h2>
+          <div class="panel-note" id="trendNote"></div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="trendChart" class="chart" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:#0f9d58"></span>整体活跃率</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">区域在售项目总使用明细</h2>
+          <div class="panel-note">当前按所选月份展示人员明细。点击总访问次数、移动端访问次数、PC 端访问次数可排序。</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead id="peopleHead"></thead>
+          <tbody id="peopleBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <script src="./project_usage_base_data.js"></script>
+  <script src="./project_usage_extra_data.js"></script>
+  <script>
+    const fmtPct = (n) => `${(Number(n || 0) * 100).toFixed(2)}%`;
+    const fmtNum = (n) => `${Number(n || 0)}`;
+    const tooltip = document.getElementById('tooltip');
+    const regionNames = [...new Set(DATA.regions.map(d => d['区域名称']))];
+    const monthColumns = [...new Set(DATA.regions.map(d => d['年月']))];
+    const params = new URLSearchParams(window.location.search);
+    let selectedRegion = params.get('region') && regionNames.includes(params.get('region')) ? params.get('region') : regionNames[0];
+    let selectedMonth = params.get('month') && monthColumns.includes(params.get('month')) ? params.get('month') : DATA.latestMonth;
+    let sortField = '总访问次数';
+    let sortDir = 'desc';
+
+    function showTooltip(text, x, y) {
+      tooltip.textContent = text;
+      tooltip.classList.add('show');
+      const pad = 16;
+      const width = tooltip.offsetWidth || 220;
+      const height = tooltip.offsetHeight || 48;
+      tooltip.style.left = `${Math.min(window.innerWidth - width - pad, x + 14)}px`;
+      tooltip.style.top = `${Math.max(pad, y - height - 16)}px`;
+    }
+    function hideTooltip() { tooltip.classList.remove('show'); }
+    document.addEventListener('mousemove', (e) => {
+      const el = e.target.closest('[data-tooltip]');
+      if (!el) return hideTooltip();
+      showTooltip(el.dataset.tooltip, e.clientX, e.clientY);
+    });
+    document.addEventListener('mouseleave', hideTooltip);
+
+    function renderLineChart(rows) {
+      const svg = document.getElementById('trendChart');
+      const width = 900, height = 320;
+      const margin = { top: 24, right: 24, bottom: 56, left: 54 };
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+      const maxY = 0.85;
+      const x = (i) => margin.left + (innerW / ((rows.length - 1) || 1)) * i;
+      const y = (v) => margin.top + innerH - (v / maxY) * innerH;
+      const grid = [0, 0.2, 0.4, 0.6, 0.8].map(v => `<g><line x1="${margin.left}" y1="${y(v)}" x2="${width - margin.right}" y2="${y(v)}" stroke="#e7eef7" /><text x="${margin.left - 10}" y="${y(v)+4}" font-size="12" fill="#8aa">${(v*100).toFixed(0)}%</text></g>`).join('');
+      const path = rows.map((row, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(Number(row['整体活跃率'] || 0))}`).join(' ');
+      const dots = rows.map((row, i) => `<circle cx="${x(i)}" cy="${y(Number(row['整体活跃率'] || 0))}" r="5" fill="#0f9d58" data-tooltip="${selectedRegion}\n${row['年月']}\n整体活跃率：${fmtPct(row['整体活跃率'])}"></circle>`).join('');
+      const pointLabels = rows.map((row, i) => {
+        const value = Number(row['整体活跃率'] || 0);
+        const labelY = Math.max(margin.top + 12, y(value) - 12);
+        return `<text x="${x(i)}" y="${labelY}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f9d58">${fmtPct(value)}</text>`;
+      }).join('');
+      const labels = rows.map((row, i) => `<text x="${x(i)}" y="${height - 16}" text-anchor="middle" font-size="12" fill="#6b7c93">${row['年月']}</text>`).join('');
+      svg.innerHTML = `
+        ${grid}
+        <path d="${path}" fill="none" stroke="#0f9d58" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+        ${dots}
+        ${pointLabels}
+        ${labels}
+      `;
+    }
+
+    function renderKpis(currentRow) {
+      document.getElementById('kpiGrid').innerHTML = [
+        [`${selectedMonth} 在售项目总人数`, fmtNum(currentRow['在售项目总人数'])],
+        [`${selectedMonth} 整体活跃率`, fmtPct(currentRow['整体活跃率'])],
+        [`${selectedMonth} 移动端活跃率`, fmtPct(currentRow['移动活跃率'])],
+        [`${selectedMonth} PC端活跃率`, fmtPct(currentRow['PC活跃率'])]
+      ].map(([label, value]) => `
+        <div class="kpi">
+          <div class="label">${label}</div>
+          <div class="value">${value}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderPeopleTable() {
+      const dirMark = (field) => sortField === field ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
+      document.getElementById('peopleHead').innerHTML = `
+        <tr>
+          <th>姓名</th>
+          <th>分管项目名</th>
+          <th>职级</th>
+          <th class="sortable" data-sort-field="总访问次数">总访问次数${dirMark('总访问次数')}</th>
+          <th class="sortable" data-sort-field="移动端访问次数">移动端访问次数${dirMark('移动端访问次数')}</th>
+          <th class="sortable" data-sort-field="PC端访问次数">PC端访问次数${dirMark('PC端访问次数')}</th>
+        </tr>
+      `;
+      const rows = EXTRA_DATA.people
+        .filter(item => item['区域名称'] === selectedRegion && item['年月'] === selectedMonth)
+        .sort((a, b) => {
+          const diff = Number(b[sortField] || 0) - Number(a[sortField] || 0);
+          const result = sortDir === 'desc' ? diff : -diff;
+          if (result !== 0) return result;
+          return String(a['姓名']).localeCompare(String(b['姓名']));
+        });
+      document.getElementById('peopleBody').innerHTML = rows.map(row => `
+        <tr>
+          <td>${row['姓名'] || '-'}</td>
+          <td>${row['分管项目名'] || '-'}</td>
+          <td>${row['职级'] || '-'}</td>
+          <td>${fmtNum(row['总访问次数'])}</td>
+          <td>${fmtNum(row['移动端访问次数'])}</td>
+          <td>${fmtNum(row['PC端访问次数'])}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="6">该区域该月份暂无人员访问记录</td></tr>';
+    }
+
+    function syncQuery() {
+      const next = new URLSearchParams({ region: selectedRegion, month: selectedMonth });
+      history.replaceState({}, '', `${location.pathname}?${next.toString()}`);
+    }
+
+    function render() {
+      document.getElementById('pageTitle').textContent = `${selectedRegion}在售项目总使用详情`;
+      const rows = DATA.regions.filter(item => item['区域名称'] === selectedRegion);
+      const currentRow = rows.find(item => item['年月'] === selectedMonth) || rows[rows.length - 1];
+      document.getElementById('trendNote').textContent = `${selectedRegion} 从 ${rows[0]['年月']} 到 ${rows[rows.length - 1]['年月']} 的月度活跃变化，当前明细口径为 ${selectedMonth}`;
+      renderKpis(currentRow);
+      renderLineChart(rows);
+      renderPeopleTable();
+      syncQuery();
+    }
+
+    const regionSelect = document.getElementById('regionSelect');
+    const monthSelect = document.getElementById('monthSelect');
+    regionSelect.innerHTML = regionNames.map(name => `<option value="${name}">${name}</option>`).join('');
+    monthSelect.innerHTML = monthColumns.map(name => `<option value="${name}">${name}</option>`).join('');
+    regionSelect.value = selectedRegion;
+    monthSelect.value = selectedMonth;
+    regionSelect.addEventListener('change', (e) => { selectedRegion = e.target.value; render(); });
+    monthSelect.addEventListener('change', (e) => { selectedMonth = e.target.value; render(); });
+    document.getElementById('peopleHead').addEventListener('click', (e) => {
+      const th = e.target.closest('[data-sort-field]');
+      if (!th) return;
+      const field = th.dataset.sortField;
+      if (sortField === field) {
+        sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+      } else {
+        sortField = field;
+        sortDir = 'desc';
+      }
+      renderPeopleTable();
+    });
+
+    render();
+  </script>
+</body>
+</html>
