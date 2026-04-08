@@ -77,6 +77,14 @@
     .table-wrap {
       overflow: auto; border-radius: 18px; border: 1px solid var(--line); position: relative;
     }
+
+    .scroll-hint {
+      display: none;
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
     table { width: 100%; min-width: 1320px; border-collapse: collapse; background: white; }
     th, td {
       padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-size: 13px;
@@ -103,7 +111,95 @@
     }
     .tooltip.show { opacity: 1; transform: translateY(0); }
     @media (max-width: 1100px) { .kpis { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 760px) { .kpis { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) {
+      .page {
+        padding: 20px 12px 40px;
+      }
+
+      .hero {
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .eyebrow {
+        font-size: 11px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .subtitle {
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .toolbar {
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .btn,
+      .select {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .panel {
+        border-radius: 18px;
+        padding: 14px 14px 12px;
+        margin-bottom: 14px;
+      }
+
+      .panel-head {
+        align-items: start;
+        flex-direction: column;
+        margin-bottom: 12px;
+      }
+
+      .panel-title {
+        font-size: 17px;
+      }
+
+      .kpis {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .kpi {
+        padding: 14px 16px;
+      }
+
+      .kpi .value {
+        font-size: 24px;
+      }
+
+      svg.chart {
+        min-width: 720px;
+        height: 300px;
+      }
+
+      .table-wrap {
+        margin: 0 -2px;
+      }
+
+      .scroll-hint {
+        display: block;
+      }
+
+      table {
+        min-width: 1120px;
+      }
+
+      th, td {
+        padding: 10px 10px;
+        font-size: 12px;
+      }
+
+      th:first-child, td:first-child { left: 0; min-width: 92px; }
+      th:nth-child(2), td:nth-child(2) { left: 92px; min-width: 240px; }
+    }
   </style>
 </head>
 <body>
@@ -146,6 +242,7 @@
           <div class="panel-note">当前按所选月份展示人员明细。点击总访问次数、移动端访问次数、PC 端访问次数可排序。</div>
         </div>
       </div>
+      <div class="scroll-hint">表格列较多，手机端可左右滑动查看完整字段。</div>
       <div class="table-wrap">
         <table>
           <thead id="peopleHead"></thead>
@@ -163,8 +260,9 @@
     const fmtPct = (n) => `${(Number(n || 0) * 100).toFixed(2)}%`;
     const fmtNum = (n) => `${Number(n || 0)}`;
     const tooltip = document.getElementById('tooltip');
-    const regionNames = [...new Set(DATA.regions.map(d => d['区域名称']))];
-    const monthColumns = [...new Set(DATA.regions.map(d => d['年月']))];
+    const validRegionRows = DATA.regions.filter(d => d['区域名称']);
+    const regionNames = [...new Set(validRegionRows.map(d => d['区域名称']))];
+    const monthColumns = [...new Set(validRegionRows.map(d => d['年月']))];
     const params = new URLSearchParams(window.location.search);
     let selectedRegion = params.get('region') && regionNames.includes(params.get('region')) ? params.get('region') : regionNames[0];
     let selectedMonth = params.get('month') && monthColumns.includes(params.get('month')) ? params.get('month') : DATA.latestMonth;
@@ -242,7 +340,7 @@
         </tr>
       `;
       const rows = EXTRA_DATA.people
-        .filter(item => item['区域名称'] === selectedRegion && item['年月'] === selectedMonth)
+        .filter(item => item['区域名称'] && item['区域名称'] === selectedRegion && item['年月'] === selectedMonth)
         .sort((a, b) => {
           const diff = Number(b[sortField] || 0) - Number(a[sortField] || 0);
           const result = sortDir === 'desc' ? diff : -diff;
@@ -268,7 +366,7 @@
 
     function render() {
       document.getElementById('pageTitle').textContent = `${selectedRegion}在售项目总使用详情`;
-      const rows = DATA.regions.filter(item => item['区域名称'] === selectedRegion);
+      const rows = validRegionRows.filter(item => item['区域名称'] === selectedRegion);
       const currentRow = rows.find(item => item['年月'] === selectedMonth) || rows[rows.length - 1];
       document.getElementById('trendNote').textContent = `${selectedRegion} 从 ${rows[0]['年月']} 到 ${rows[rows.length - 1]['年月']} 的月度活跃变化，当前明细口径为 ${selectedMonth}`;
       renderKpis(currentRow);
