@@ -242,6 +242,107 @@
       min-height: 48px;
     }
 
+    .month-mobile {
+      display: none;
+      width: 100%;
+      position: relative;
+    }
+
+    .month-mobile-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+    }
+
+    .month-mobile-btn::after {
+      content: "▾";
+      color: var(--muted);
+      font-size: 14px;
+      flex: 0 0 auto;
+    }
+
+    .month-mobile-btn.open::after {
+      content: "▴";
+    }
+
+    .month-mobile-summary {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .month-mobile-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      z-index: 20;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 20px 40px rgba(31, 78, 120, 0.12);
+      padding: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .month-mobile-panel.open {
+      display: block;
+    }
+
+    .month-mobile-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .month-mobile-action {
+      border: 0;
+      background: transparent;
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 0;
+    }
+
+    .month-mobile-list {
+      display: grid;
+      gap: 8px;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .month-mobile-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfdff;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .month-mobile-item input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--brand);
+      flex: 0 0 auto;
+    }
+
     .scroll-hint {
       display: none;
       margin-top: 8px;
@@ -645,23 +746,11 @@
       }
 
       .month-picker {
-        width: 100%;
-        padding: 8px;
-        gap: 6px;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-      }
-
-      .month-picker::-webkit-scrollbar {
         display: none;
       }
 
-      .month-pill {
-        padding: 7px 10px;
-        font-size: 12px;
-        flex: 0 0 auto;
+      .month-mobile {
+        display: block;
       }
 
       .region-select {
@@ -765,6 +854,18 @@
       <div class="rank-toolbar">
         <label class="panel-note">选择月份</label>
         <div id="rankMonthPicker" class="month-picker"></div>
+        <div id="rankMonthMobile" class="month-mobile">
+          <button id="rankMonthMobileBtn" class="month-mobile-btn" type="button">
+            <span id="rankMonthMobileSummary" class="month-mobile-summary"></span>
+          </button>
+          <div id="rankMonthMobilePanel" class="month-mobile-panel">
+            <div class="month-mobile-actions">
+              <button id="rankMonthMobileClear" class="month-mobile-action" type="button">清空</button>
+              <button id="rankMonthMobileDone" class="month-mobile-action" type="button">完成</button>
+            </div>
+            <div id="rankMonthMobileList" class="month-mobile-list"></div>
+          </div>
+        </div>
         <label for="terminalSelect" class="panel-note">选择终端</label>
         <select id="terminalSelect" class="region-select" style="min-width:180px;">
           <option value="整体活跃率">整体活跃率</option>
@@ -879,10 +980,34 @@
     let selectedTerminal = '整体活跃率';
     let peopleSortField = '整体访问次数';
     let peopleSortDir = 'desc';
+    const isMobileViewport = () => window.matchMedia('(max-width: 760px)').matches;
+    const defaultRankMonth = monthColumns[Math.max(0, monthColumns.length - 2)];
+    let mobileSelectedMonths = [defaultRankMonth];
+
+    function syncMobileMonthSummary() {
+      const summary = document.getElementById('rankMonthMobileSummary');
+      if (!summary) return;
+      summary.textContent = mobileSelectedMonths.length ? `已选 ${mobileSelectedMonths.length} 个月：${mobileSelectedMonths.join('、')}` : '请选择月份';
+    }
+
+    function renderMobileMonthOptions() {
+      const list = document.getElementById('rankMonthMobileList');
+      if (!list) return;
+      list.innerHTML = monthColumns.map(name => `
+        <label class="month-mobile-item">
+          <span>${name}</span>
+          <input class="rank-month-mobile-input" type="checkbox" value="${name}" ${mobileSelectedMonths.includes(name) ? 'checked' : ''}>
+        </label>
+      `).join('');
+      syncMobileMonthSummary();
+    }
 
     function getSelectedRankMonths() {
+      if (isMobileViewport()) {
+        return mobileSelectedMonths.length ? mobileSelectedMonths : [defaultRankMonth];
+      }
       const values = [...document.querySelectorAll('.rank-month-input:checked')].map(input => input.value);
-      return values.length ? values : [monthColumns[Math.max(0, monthColumns.length - 2)]];
+      return values.length ? values : [defaultRankMonth];
     }
 
     function renderOverallRanks() {
@@ -1009,17 +1134,51 @@
     }
 
     const rankMonthPicker = document.getElementById('rankMonthPicker');
+    const rankMonthMobileBtn = document.getElementById('rankMonthMobileBtn');
+    const rankMonthMobilePanel = document.getElementById('rankMonthMobilePanel');
+    const rankMonthMobileClear = document.getElementById('rankMonthMobileClear');
+    const rankMonthMobileDone = document.getElementById('rankMonthMobileDone');
     const terminalSelect = document.getElementById('terminalSelect');
-    const defaultRankMonth = monthColumns[Math.max(0, monthColumns.length - 2)];
     rankMonthPicker.innerHTML = monthColumns.map(name => `
       <label class="month-check">
         <input class="rank-month-input" type="checkbox" value="${name}" ${name === defaultRankMonth ? 'checked' : ''}>
         <span class="month-pill">${name}</span>
       </label>
     `).join('');
+    renderMobileMonthOptions();
     rankMonthPicker.addEventListener('change', () => {
       renderOverallRanks();
       renderPeopleRankingTable();
+    });
+    rankMonthMobileBtn.addEventListener('click', () => {
+      rankMonthMobileBtn.classList.toggle('open');
+      rankMonthMobilePanel.classList.toggle('open');
+    });
+    rankMonthMobileClear.addEventListener('click', () => {
+      mobileSelectedMonths = [];
+      renderMobileMonthOptions();
+    });
+    rankMonthMobileDone.addEventListener('click', () => {
+      const checked = [...document.querySelectorAll('.rank-month-mobile-input:checked')].map(input => input.value);
+      mobileSelectedMonths = checked.length ? checked : [defaultRankMonth];
+      renderMobileMonthOptions();
+      rankMonthMobileBtn.classList.remove('open');
+      rankMonthMobilePanel.classList.remove('open');
+      renderOverallRanks();
+      renderPeopleRankingTable();
+    });
+    document.addEventListener('change', (e) => {
+      if (!e.target.classList.contains('rank-month-mobile-input')) return;
+      mobileSelectedMonths = [...document.querySelectorAll('.rank-month-mobile-input:checked')].map(input => input.value);
+      syncMobileMonthSummary();
+    });
+    document.addEventListener('click', (e) => {
+      if (!isMobileViewport()) return;
+      const mobileWrap = document.getElementById('rankMonthMobile');
+      if (mobileWrap && !mobileWrap.contains(e.target)) {
+        rankMonthMobileBtn.classList.remove('open');
+        rankMonthMobilePanel.classList.remove('open');
+      }
     });
     terminalSelect.addEventListener('change', (e) => {
       selectedTerminal = e.target.value;
