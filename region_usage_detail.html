@@ -77,6 +77,14 @@
     .table-wrap {
       overflow: auto; border-radius: 18px; border: 1px solid var(--line); position: relative;
     }
+    .table-wrap.fullscreen {
+      position: fixed;
+      inset: 12px;
+      z-index: 9998;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(10, 23, 44, 0.22);
+    }
 
     .scroll-hint {
       display: none;
@@ -85,9 +93,14 @@
       font-size: 11px;
       line-height: 1.5;
     }
-    table { width: 100%; min-width: 1320px; border-collapse: collapse; background: white; }
+    .table-tools {
+      display: none;
+      justify-content: flex-end;
+      margin: 0 0 10px;
+    }
+    table { width: 100%; min-width: 980px; border-collapse: collapse; background: white; table-layout: fixed; }
     th, td {
-      padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-size: 13px;
+      padding: 10px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-size: 12px;
     }
     thead th {
       background: #f8fbff; color: var(--muted); font-weight: 700; position: sticky; top: 0; z-index: 2;
@@ -96,13 +109,30 @@
     th:nth-child(2), td:nth-child(2) {
       text-align: left; position: sticky; background: white;
     }
-    th:first-child, td:first-child { left: 0; min-width: 120px; z-index: 4; }
-    th:nth-child(2), td:nth-child(2) { left: 120px; min-width: 320px; z-index: 3; box-shadow: 6px 0 10px rgba(22, 50, 79, 0.04); }
+    th:first-child, td:first-child { left: 0; width: 90px; min-width: 90px; z-index: 4; }
+    th:nth-child(2), td:nth-child(2) { left: 90px; width: 240px; min-width: 240px; z-index: 3; box-shadow: 6px 0 10px rgba(22, 50, 79, 0.04); }
+    th:nth-child(3), td:nth-child(3) { width: 56px; min-width: 56px; }
     thead th:first-child, thead th:nth-child(2) { background:#f8fbff; }
     tbody tr:nth-child(odd) td { background: #fcfdff; }
     tbody tr:nth-child(odd) td:first-child, tbody tr:nth-child(odd) td:nth-child(2) { background: #fcfdff; }
     th.sortable { cursor: pointer; user-select: none; }
     th.sortable:hover { color: var(--brand); }
+    td.project-name, th.project-name {
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.45;
+    }
+    .dual-value {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .dual-sep {
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 600;
+    }
     .tooltip {
       position: fixed; pointer-events: none; z-index: 9999; max-width: 260px;
       padding: 10px 12px; border-radius: 12px; background: rgba(17, 27, 43, 0.92);
@@ -188,17 +218,26 @@
         display: block;
       }
 
+      .table-tools {
+        display: flex;
+      }
+
       table {
-        min-width: 1120px;
+        min-width: 860px;
       }
 
       th, td {
-        padding: 10px 10px;
-        font-size: 12px;
+        padding: 9px 8px;
+        font-size: 11px;
       }
 
-      th:first-child, td:first-child { left: 0; min-width: 92px; }
-      th:nth-child(2), td:nth-child(2) { left: 92px; min-width: 240px; }
+      th:first-child, td:first-child { left: 0; width: 78px; min-width: 78px; }
+      th:nth-child(2), td:nth-child(2) { left: 78px; width: 180px; min-width: 180px; }
+      th:nth-child(3), td:nth-child(3) { width: 48px; min-width: 48px; }
+      .table-wrap.fullscreen {
+        inset: 0;
+        border-radius: 0;
+      }
     }
   </style>
 </head>
@@ -242,8 +281,11 @@
           <div class="panel-note">当前按所选月份展示人员明细。点击总访问次数、移动端访问次数、PC 端访问次数可排序。</div>
         </div>
       </div>
+      <div class="table-tools">
+        <button id="fullscreenTableBtn" class="btn" type="button">全屏查看明细</button>
+      </div>
       <div class="scroll-hint">表格列较多，手机端可左右滑动查看完整字段。</div>
-      <div class="table-wrap">
+      <div class="table-wrap" id="peopleTableWrap">
         <table>
           <thead id="peopleHead"></thead>
           <tbody id="peopleBody"></tbody>
@@ -268,6 +310,7 @@
     let selectedMonth = params.get('month') && monthColumns.includes(params.get('month')) ? params.get('month') : DATA.latestMonth;
     let sortField = '总访问次数';
     let sortDir = 'desc';
+    let isTableFullscreen = false;
 
     function showTooltip(text, x, y) {
       tooltip.textContent = text;
@@ -315,7 +358,13 @@
 
     function renderKpis(currentRow) {
       document.getElementById('kpiGrid').innerHTML = [
-        [`${selectedMonth} 在售项目总人数`, fmtNum(currentRow['在售项目总人数'])],
+        [`${selectedMonth} 在售项目总人数 / 活跃人数`, `
+          <div class="dual-value">
+            <span>${fmtNum(currentRow['在售项目总人数'])}</span>
+            <span class="dual-sep">/</span>
+            <span>${fmtNum(currentRow['整体活跃人数'])}</span>
+          </div>
+        `],
         [`${selectedMonth} 整体活跃率`, fmtPct(currentRow['整体活跃率'])],
         [`${selectedMonth} 移动端活跃率`, fmtPct(currentRow['移动活跃率'])],
         [`${selectedMonth} PC端活跃率`, fmtPct(currentRow['PC活跃率'])]
@@ -332,7 +381,7 @@
       document.getElementById('peopleHead').innerHTML = `
         <tr>
           <th>姓名</th>
-          <th>分管项目名</th>
+          <th class="project-name">分管项目名</th>
           <th>职级</th>
           <th class="sortable" data-sort-field="总访问次数">总访问次数${dirMark('总访问次数')}</th>
           <th class="sortable" data-sort-field="移动端访问次数">移动端访问次数${dirMark('移动端访问次数')}</th>
@@ -350,7 +399,7 @@
       document.getElementById('peopleBody').innerHTML = rows.map(row => `
         <tr>
           <td>${row['姓名'] || '-'}</td>
-          <td>${row['分管项目名'] || '-'}</td>
+          <td class="project-name">${row['分管项目名'] || '-'}</td>
           <td>${row['职级'] || '-'}</td>
           <td>${fmtNum(row['总访问次数'])}</td>
           <td>${fmtNum(row['移动端访问次数'])}</td>
@@ -383,6 +432,12 @@
     monthSelect.value = selectedMonth;
     regionSelect.addEventListener('change', (e) => { selectedRegion = e.target.value; render(); });
     monthSelect.addEventListener('change', (e) => { selectedMonth = e.target.value; render(); });
+    document.getElementById('fullscreenTableBtn').addEventListener('click', () => {
+      isTableFullscreen = !isTableFullscreen;
+      const wrap = document.getElementById('peopleTableWrap');
+      wrap.classList.toggle('fullscreen', isTableFullscreen);
+      document.getElementById('fullscreenTableBtn').textContent = isTableFullscreen ? '退出全屏' : '全屏查看明细';
+    });
     document.getElementById('peopleHead').addEventListener('click', (e) => {
       const th = e.target.closest('[data-sort-field]');
       if (!th) return;

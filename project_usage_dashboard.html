@@ -242,6 +242,18 @@
       min-height: 48px;
     }
 
+    .month-select-mobile {
+      display: none;
+      width: 100%;
+      min-height: 132px;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
     .scroll-hint {
       display: none;
       margin-top: 8px;
@@ -645,23 +657,11 @@
       }
 
       .month-picker {
-        width: 100%;
-        padding: 8px;
-        gap: 6px;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-      }
-
-      .month-picker::-webkit-scrollbar {
         display: none;
       }
 
-      .month-pill {
-        padding: 7px 10px;
-        font-size: 12px;
-        flex: 0 0 auto;
+      .month-select-mobile {
+        display: block;
       }
 
       .region-select {
@@ -765,6 +765,7 @@
       <div class="rank-toolbar">
         <label class="panel-note">选择月份</label>
         <div id="rankMonthPicker" class="month-picker"></div>
+        <select id="rankMonthSelectMobile" class="month-select-mobile" multiple></select>
         <label for="terminalSelect" class="panel-note">选择终端</label>
         <select id="terminalSelect" class="region-select" style="min-width:180px;">
           <option value="整体活跃率">整体活跃率</option>
@@ -879,8 +880,14 @@
     let selectedTerminal = '整体活跃率';
     let peopleSortField = '整体访问次数';
     let peopleSortDir = 'desc';
+    const isMobileViewport = () => window.matchMedia('(max-width: 760px)').matches;
 
     function getSelectedRankMonths() {
+      if (isMobileViewport()) {
+        const mobileSelect = document.getElementById('rankMonthSelectMobile');
+        const values = [...mobileSelect.selectedOptions].map(option => option.value);
+        return values.length ? values : [monthColumns[Math.max(0, monthColumns.length - 2)]];
+      }
       const values = [...document.querySelectorAll('.rank-month-input:checked')].map(input => input.value);
       return values.length ? values : [monthColumns[Math.max(0, monthColumns.length - 2)]];
     }
@@ -1009,6 +1016,7 @@
     }
 
     const rankMonthPicker = document.getElementById('rankMonthPicker');
+    const rankMonthSelectMobile = document.getElementById('rankMonthSelectMobile');
     const terminalSelect = document.getElementById('terminalSelect');
     const defaultRankMonth = monthColumns[Math.max(0, monthColumns.length - 2)];
     rankMonthPicker.innerHTML = monthColumns.map(name => `
@@ -1017,7 +1025,14 @@
         <span class="month-pill">${name}</span>
       </label>
     `).join('');
+    rankMonthSelectMobile.innerHTML = monthColumns.map(name => `
+      <option value="${name}" ${name === defaultRankMonth ? 'selected' : ''}>${name}</option>
+    `).join('');
     rankMonthPicker.addEventListener('change', () => {
+      renderOverallRanks();
+      renderPeopleRankingTable();
+    });
+    rankMonthSelectMobile.addEventListener('change', () => {
       renderOverallRanks();
       renderPeopleRankingTable();
     });
